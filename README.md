@@ -5,7 +5,7 @@ Turn HTML content into an animating 3d book - also the name of the Story Time Is
 
 [![Buddy the cat](assets/buddy.png)](http://www.storytimeisland.com/cat.html)
 
-[view an example](http://binocarlos.github.io/budddy)
+[view an example](http://binocarlos.github.io/buddy)
 
 ## installation
 
