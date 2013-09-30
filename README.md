@@ -11,7 +11,7 @@ Turn HTML content into an animating 3d book - also the name of the Story Time Is
 
 ### HTML
 
-Download [build.css](build/build.css) [build.js](build/build.js) and add them to your page.
+Download [build.css](https://raw.github.com/binocarlos/buddy/master/build/build.css) and [build.js](https://raw.github.com/binocarlos/buddy/master/build/build.js) and add them to your page.
 
 ```html
 <link rel="stylesheet" href="build.css" />
