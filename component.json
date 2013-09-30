@@ -1,0 +1,20 @@
+{
+  "name": "buddy",
+  "description": "Turn HTML content into an animating 3d book - also the name of the Story Time Island cat.",
+  "version": "0.0.3",
+  "keywords": [],
+  "dependencies": {    
+    "binocarlos/pageturner": "*",
+    "component/hammer.js": "*",
+    "component/jquery": "*"
+  },
+  "development": {},
+  "styles": [
+    "buddy.css"
+  ],
+  "main": "index.js",
+  "scripts": [
+    "index.js"
+  ],
+  "remotes": []
+}

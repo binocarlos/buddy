@@ -1,0 +1,264 @@
+
+<!doctype html>
+
+<html>
+  
+  <head>
+    <title>Buddy</title>
+    <meta name="viewport" content="width=device-width">
+    <link rel="stylesheet" href="bootstrap.css">
+    <link rel="stylesheet" href="prettify/prettify.css">
+    <link rel="stylesheet" type="text/css" href="build/build.css">
+    <style>
+      #book {
+        width: 800px;
+        height: 600px;
+        background: #fff;
+        z-index:100;
+        -moz-box-shadow: 10px 10px 10px rgba(0,0,0,0.5);
+        -webkit-box-shadow: 10px 10px 10px rgba(0,0,0,0.5);
+        box-shadow: 10px 10px 10px rgba(0,0,0,0.5);
+      }
+      .page{
+        display:none;
+
+      }
+
+      .bookpage{
+        pointer-events: none;
+        background-color:#fff;
+        font-family: Times;
+        font-size:12pt;
+        -webkit-touch-callout: none;
+        -webkit-user-select: none;
+        -khtml-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+      }
+
+      .pageturner-book .leafedge{
+        background-color: #fff;
+      }
+
+      .pageturner-book .leaf .content{
+        background-color: #fff;
+      }
+
+      img.buddy{
+        margin-top:50px;
+      }
+
+    </style>
+  </head>
+  
+  <body>
+    <div class="container text-center">
+      <div class="row">
+        <div class="col-lg-3">
+          <img class="buddy" height=220 src="assets/buddy.png" />
+        </div>
+        <div class="col-lg-6">
+          <h1 class="page-header">Buddy <small>(0.0.1)</small></h1>
+
+          <p class="lead">Turn HTML content into an animating 3d book!</p>
+
+          <p><small>Also the name of the <a href="http://www.storytimeisland.com">Story Time Island</a> cat.</small></p>
+
+          <div class="list-group" style="margin-top:25px">
+            <a class="list-group-item" href="https://github.com/binocarlos/buddy">View on GitHub</a>            
+          </div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-lg-12">
+
+    <div class="container text-center">
+      <div class="row">
+        <div class="col-lg-12">
+          <table width="100%"><tr><td align=center>
+          <div id="book">
+            <div class="page">
+              <img src="assets/countryside.jpg" />
+            </div>
+            <div class="page">
+              <img src="assets/fireengine.jpg" />
+            </div>
+            <div class="page">
+              <img src="assets/sea.jpg" />
+            </div>
+          </div>
+          </td></tr></table>
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:20px;margin-bottom:20px;">
+        <div class="col-lg-12">
+          <button id="prevbutton" type="button" class="btn btn-info">&lt; Backwards</button>
+          <button id="nextbutton" type="button" class="btn btn-warning">Forward &gt;</button>
+
+        </div>
+      </div>
+
+    </div>
+
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-lg-6 col-lg-offset-3">
+          <div class='panel text-left'>
+            <div class="panel-heading">HTML Installation</div>
+            <div class="panel-body">
+              <p>Download <a href="dist/build.css" download>build.css</a> and <a href="dist/build.js" download>build.js</a> and add them to your page.</p>
+
+              <pre class="prettyprint">&lt;link rel="stylesheet" href="build.css" /&gt;
+&lt;script src="build.js"&gt;&lt;/script&gt;</pre>
+            </div>
+          </div>
+
+          <div class='panel text-left'>
+            <div class="panel-heading"><a href="https://github.com/component/component">Component</a> Installation</div>
+            <div class="panel-body">
+              <pre class="prettyprint">$ component install binocarlos/buddy</pre>
+            </div>
+          </div>
+
+          <div class='panel text-left'>
+            <div class="panel-heading">Usage</div>
+            <div class="panel-body">
+            <p>First you need some content that Buddy will turn into a book:</p>
+
+            <pre class="prettyprint">&lt;div id="book"&gt;
+  &lt;div class="page"&gt;
+    Buddy likes fish.
+  &lt;/div&gt;
+  &lt;div class="page"&gt;
+    Buddy likes humans when they give him fish.
+  &lt;/div&gt;
+  &lt;div class="page"&gt;
+    Buddy thinks humans are stupid because they give him fish.
+  &lt;/div&gt;
+&lt;/div&gt;</pre>
+
+            <p>Then - tell buddy about your book:</p>
+
+            <pre class="prettyprint">var Buddy = require('buddy');
+var book = new Buddy({
+  selector:'#book',
+  page_selector:'.page'
+});</pre>
+            </div>
+          </div>
+
+
+          <div class='panel text-left'>
+            <div class="panel-heading">Turning Pages</div>
+            <div class="panel-body">
+            <p>Buddy can handle touch events so users can turn pages - however, you can build galleries of thumbnails and manually trigger the page.</p>
+            
+            <hr />
+            <h4>animate_direction</h4>
+
+            <p>This moves the book either forward or backwards by one page:</p>
+
+            <pre class="prettyprint">var book = new Buddy(...);
+
+// move the book forward one page
+book.animate_direction(1)</pre>
+
+
+            <hr />
+
+            <h4>animate_index</h4>
+
+            <p>This moves the book to a particular page:</p>
+
+            <pre class="prettyprint">var book = new Buddy(...);
+
+// send the book to page 6
+book.animate_index(5)</pre>
+            </div>
+          </div>
+
+
+          <div class='panel text-left'>
+            <div class="panel-heading">Complete Options</div>
+            <div class="panel-body">
+            <p>Buddy can handle a range of other options - here is an example:</p>
+            <pre class="prettyprint">var Buddy = require('buddy');
+var book = new Buddy({
+
+  // the div that holds our pages
+  selector:'#book',
+
+  // the selector for our actual pages
+  page_selector:'.page',
+
+  // the element that responds to drag events to turn the page
+  touch_selector:'body',
+
+  // additional classname to apply to pages
+  apply_pageclass:'bookpage',
+
+  // control 3d mode (pages fade when disabled)
+  is_3d:true,
+
+  // how much to apply the 3d effect
+  perspective:950,
+
+  // control which page the book starts on
+  startpage:0,
+
+  // control whether a shadow is auto-rendered
+  shadow:true
+
+});</pre>
+            </div>
+          </div>
+
+          <div class='panel text-left'>
+            <div class="panel-heading">Story Time Island - Cat Diary</div>
+            <div class="panel-body">
+              <p>If you like Buddy - checkout his <a href="http://www.storytimeisland.com/cat.html">diary</a> at <a href="http://www.storytimeisland.com">Story Time Island!</a></p>
+
+              <hr />
+
+              <a href="http://www.storytimeisland.com"><img src="assets/logo.png" width=400 border=0 /></a>
+            </div>
+          </div>
+
+      </div>
+    </div>
+
+
+  <script src="build/build.js"></script>
+  <script src="prettify/prettify.js"></script>
+
+  <script>
+
+    var $ = require('jquery');
+
+    $(function(){
+      window.prettyPrint && prettyPrint()   
+    })
+
+    $(function(){
+      var Buddy = require('buddy');
+      var book = new Buddy({
+        selector:'#book',
+        page_selector:'.page'
+      });
+
+      $('#prevbutton').on('click', function(){
+        book.animate_direction(-1);
+      })
+
+      $('#nextbutton').on('click', function(){
+        book.animate_direction(1);
+      })
+      
+    })
+
+  </script>
+  </body>
+</html>
