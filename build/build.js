@@ -418,10 +418,321 @@ for (var i = 0; i < styles.length; i++) {
 }
 
 });
+require.register("pgherveou-prefix/index.js", function(exports, require, module){
+// module globals
+
+var prefixes = ['webkit','Moz','ms','O']
+  , len = prefixes.length
+  , p = document.createElement('p')
+  , style = p.style
+  , capitalize = function (str) {return str.charAt(0).toUpperCase() + str.slice(1);}
+  , dasherize = function(str) {
+      return str.replace(/([A-Z])/g, function(str,m1) {
+        return '-' + m1.toLowerCase();
+      });
+    };
+
+// nullify p to release dom node
+p = null;
+
+/**
+ * get prefix for dom style
+ *
+ * example
+ *   prefix('transform') // webkitTransform
+ *   prefix('transform', true) // -webkit-transform
+ *
+ * @param  {String}   ppty dom style
+ * @param  {Boolean}  dasherize
+ * @return {String}   prefixed ppty
+ * @api public
+ */
+
+module.exports = function(ppty, dasherized) {
+  var Ppty, name, Name;
+
+  // test without prefix
+  if (style[ppty] !== undefined) {
+    if (!dasherized) return ppty;
+    return dasherize(ppty);
+  }
+
+  // test with prefix
+  Ppty = capitalize(ppty);
+  for (i = 0; i < len; i++) {
+    name = prefixes[i] + Ppty;
+    if (style[name] !== undefined) {
+      if (!dasherized) return name;
+      return '-' + prefixes[i].toLowerCase() + '-' + dasherize(ppty);
+    }
+  }
+
+  // not found return empty string
+  return '';
+};
+
+});
+require.register("pgherveou-transitionend/index.js", function(exports, require, module){
+/**
+ * module dependencies
+ */
+
+var prefix = require('prefix');
+
+// transitionend mapping
+// src: https://github.com/twitter/bootstrap/issues/2870
+
+var transEndEventNames = {
+    'webkitTransition' : 'webkitTransitionEnd',
+    'WebkitTransition' : 'webkitTransitionEnd',
+    'MozTransition'    : 'transitionend',
+    'OTransition'      : 'oTransitionEnd',
+    'msTransition'     : 'MSTransitionEnd',
+    'transition'       : 'transitionend'
+};
+
+module.exports = transEndEventNames[prefix('transition')];
+});
+require.register("anthonyshort-has-transitions/index.js", function(exports, require, module){
+/**
+ * This will store the property that the current
+ * browser uses for transitionDuration
+ */
+var property;
+
+/**
+ * The properties we'll check on an element
+ * to determine if it actually has transitions
+ * We use duration as this is the only property
+ * needed to technically have transitions
+ * @type {Array}
+ */
+var types = [
+  "transitionDuration",
+  "MozTransitionDuration",
+  "webkitTransitionDuration"
+];
+
+/**
+ * Determine the correct property for this browser
+ * just once so we done need to check every time
+ */
+while(types.length) {
+  var type = types.shift();
+  if(type in document.body.style) {
+    property = type;
+  }
+}
+
+/**
+ * Determine if the browser supports transitions or
+ * if an element has transitions at all.
+ * @param  {Element}  el Optional. Returns browser support if not included
+ * @return {Boolean}
+ */
+function hasTransitions(el){
+  if(!property) {
+    return false; // No browser support for transitions
+  }
+  if(!el) {
+    return property != null; // We just want to know if browsers support it
+  }
+  var duration = getComputedStyle(el)[property];
+  return duration !== "" && parseFloat(duration) !== 0; // Does this element have transitions?
+}
+
+module.exports = hasTransitions;
+});
+require.register("component-event/index.js", function(exports, require, module){
+
+/**
+ * Bind `el` event `type` to `fn`.
+ *
+ * @param {Element} el
+ * @param {String} type
+ * @param {Function} fn
+ * @param {Boolean} capture
+ * @return {Function}
+ * @api public
+ */
+
+exports.bind = function(el, type, fn, capture){
+  if (el.addEventListener) {
+    el.addEventListener(type, fn, capture || false);
+  } else {
+    el.attachEvent('on' + type, fn);
+  }
+  return fn;
+};
+
+/**
+ * Unbind `el` event `type`'s callback `fn`.
+ *
+ * @param {Element} el
+ * @param {String} type
+ * @param {Function} fn
+ * @param {Boolean} capture
+ * @return {Function}
+ * @api public
+ */
+
+exports.unbind = function(el, type, fn, capture){
+  if (el.removeEventListener) {
+    el.removeEventListener(type, fn, capture || false);
+  } else {
+    el.detachEvent('on' + type, fn);
+  }
+  return fn;
+};
+
+});
+require.register("anthonyshort-css-emitter/index.js", function(exports, require, module){
+/**
+ * Module Dependencies
+ */
+
+var events = require('event');
+
+// CSS events
+
+var watch = [
+  'transitionend'
+, 'webkitTransitionEnd'
+, 'oTransitionEnd'
+, 'MSTransitionEnd'
+, 'animationend'
+, 'webkitAnimationEnd'
+, 'oAnimationEnd'
+, 'MSAnimationEnd'
+];
+
+/**
+ * Expose `CSSnext`
+ */
+
+module.exports = CssEmitter;
+
+/**
+ * Initialize a new `CssEmitter`
+ *
+ */
+
+function CssEmitter(element){
+  if (!(this instanceof CssEmitter)) return new CssEmitter(element);
+  this.el = element;
+}
+
+/**
+ * Bind CSS events.
+ *
+ * @api public
+ */
+
+CssEmitter.prototype.bind = function(fn){
+  for (var i=0; i < watch.length; i++) {
+    events.bind(this.el, watch[i], fn);
+  }
+  return this;
+};
+
+/**
+ * Unbind CSS events
+ * 
+ * @api public
+ */
+
+CssEmitter.prototype.unbind = function(fn){
+  for (var i=0; i < watch.length; i++) {
+    events.unbind(this.el, watch[i], fn);
+  }
+  return this;
+};
+
+/**
+ * Fire callback only once
+ * 
+ * @api public
+ */
+
+CssEmitter.prototype.once = function(fn){
+  var self = this;
+  function on(){
+    self.unbind(on);
+    fn.apply(self.el, arguments);
+  }
+  self.bind(on);
+  return this;
+};
+
+
+});
+require.register("anthonyshort-after-transition/index.js", function(exports, require, module){
+var hasTransitions = require('has-transitions');
+var emitter = require('css-emitter');
+
+function afterTransition(el, callback) {
+  if(hasTransitions(el)) {
+    return emitter(el).bind(callback);
+  }
+  return callback.apply(el);
+};
+
+afterTransition.once = function(el, callback) {
+  afterTransition(el, function fn(){
+    callback.apply(el);
+    emitter(el).unbind(fn);
+  });
+};
+
+module.exports = afterTransition;
+});
 require.register("binocarlos-pageturner/index.js", function(exports, require, module){
 /*
 
-  PageHammer
+  Page Turner
+
+
+                        ---------------- Turning Pair (a single page turn = 2 leafs turning at the same time)
+                        |         |       
+                        \        /
+                        -        _
+                        -\      /_ 
+                        - \    / _ ----- Turning Leaf (one of the 4 hot pages as 1/2 of a book page)  
+                        -  \  /  _
+    -----------------------------_-------------------
+    |                   -   |    _                  |
+    |                   -   |    _                  | 
+    |                   -   |    _                  |
+    |                   -   |    _                  |
+    |                   -   |    _                  |---- Base leaf (single sided leaf from prev / next page)
+    |                   -   |    _                  |
+    |                   -   |    _                  |
+    |                   -   |    _                  |
+    |                   -   |    _                  |
+    |                   -   |    _                  |
+    |                    \  |  /                    |
+    |                     \ | /                     |
+    |                      \|/                      |
+    -------------------------------------------------
+
+
+    -------------------------------------------------
+    |                       |                       |
+    |                       |                       |
+    |                       |                       |
+    |                       |                       |
+    |                       |                       |
+    |                       |                       |
+    |                       |                       |
+    |                       |                       |
+    |                       |                       |
+    |                       |                       |
+    |                       |                       |
+    |                       |                       |
+    |                       |                       |
+    -------------------------------------------------
+    
+  
   
 */
 
@@ -429,6 +740,8 @@ var Emitter = require('emitter');
 var $ = require('jquery');
 var transform = require('transform-property');
 var has3d = require('has-translate3d');
+var transEndEventName = require("transitionend");
+var afterTransition = require('after-transition');
 
 var template = require('./templates/booktemplate.js');
 
@@ -456,8 +769,10 @@ function PageTurner(options){
   Emitter.call(this);
 
   this.options = options;
-  this.is3d = options.has3d;
+  this.is3d = has3d && options.has3d;
 
+  console.log('-------------------------------------------');
+  console.log('3d = ' + this.is3d);
   this.page_html = [];
   this.currentpage = 0;
 
@@ -488,10 +803,128 @@ PageTurner.prototype.render = function(){
 
   this.book.html(template);
 
-  this.base = this.book.find('#base');
-  this.leaves = this.book.find('#leaves');
+  /*
+  
+    #base
 
-  setPerspective(this.leaves, this.options.perspective);
+    the left and right pages for the prev and next pages
+
+    -------------------------------------------------
+    |                       |                       |
+    |                       |                       |
+    |                       |                       |
+    |                       |                       |
+    |                       |                       |
+    |                       |                       |
+    |       prev left       |       next right      |
+    |                       |                       |
+    |                       |                       |
+    |                       |                       |
+    |                       |                       |
+    |                       |                       |
+    |                       |                       |
+    -------------------------------------------------
+    
+    
+  */
+  this.base = this.book.find('#base');
+
+  /*
+  
+    #current
+
+    the leaves that we see as the book
+
+    -------------------------------------------------
+    |                       |                       |
+    |                       |                       |
+    |                       |                       |
+    |                       |                       |
+    |                       |                       |
+    |                       |                       |
+    |      front left       |     front right       |
+    |                       |                       |
+    |                       |                       |
+    |                       |                       |
+    |                       |                       |
+    |                       |                       |
+    |                       |                       |
+    -------------------------------------------------
+    
+    
+  */
+  this.fronts = this.book.find('#fronts');  
+
+  /*
+  
+    #leaves
+
+    the DOM element that holds our page turning leaves
+
+    we have 2 leaves '#back' and '#forward' - each meaning a direction the book is turning
+
+    -------------------------------------------------
+    |                       |                       |
+    |                       |                       |
+    |                       |                       |
+    |                       |                       |
+    |                       |                       |
+    |                       |                       |
+    |      back left        |      back right       |
+    |                       |                       |
+    |                       |                       |
+    |                       |                       |
+    |                       |                       |
+    |                       |                       |
+    |                       |                       |
+    -------------------------------------------------
+    
+    
+  */
+  this.backs = this.book.find('#backs');
+
+  /*
+
+
+                                 the edge is 90 degrees so it shows when the page is flat
+                                  |       
+                        -        _
+                        -\      /_ 
+                        - \    / _  
+                        -  \  /  _
+    -----------------------------_-------------------
+    |                   -   |    _                  |
+    |                   -   |    _                  | 
+    |                   -   |    _                  |
+    |                   -   |    _                  |
+    |                   -   |    _                  |
+    |                   -   |    _                  |
+    |                   -   |    _                  |
+    |                   -   |    _                  |
+    |                   -   |    _                  |
+    |                   -   |    _                  |
+    |                    \  |  /                    |
+    |                     \ | /                     |
+    |                      \|/                      |
+    -------------------------------------------------
+    
+    
+  */
+  this.edges = this.book.find('#edges');
+
+/*
+  this.frontleafelems = $('<div class="leafholder maintain3d"></div>');
+  this.backleafelems = $('<div class="leafholder maintain3d"></div>');
+*/
+
+  setPerspective(this.fronts, this.options.perspective);
+  setPerspective(this.backs, this.options.perspective);
+  //setPerspective(this.edges, this.options.perspective);
+
+/*  
+  this.leaves.append(this.frontleafelems);
+  this.leaves.append(this.backleafelems);
+*/
 
   this.resize();
   this.load_page(this.options.startpage || 0);
@@ -509,6 +942,53 @@ PageTurner.prototype.render = function(){
   })
 }
 
+PageTurner.prototype.build_edges = function(){
+
+  var self = this;
+  if(this.leftedge){
+    this.leftedge.remove();
+  }
+
+  if(this.rightedge){
+    this.rightedge.remove();
+  }
+
+  var leftedgeelem = $('<div class="leftedge leafholder maintain3d"><div class="leafedge"></div></div>').css({
+    'z-index':1000
+  })
+  var rightedgeelem = $('<div class="rightedge leafholder maintain3d"><div class="leafedge"></div></div>').css({
+    'z-index':1001
+  })
+
+  this.leftedge = leftedgeelem;
+  this.rightedge = rightedgeelem;
+
+  self.leftedge.css({
+    opacity:0
+  })
+
+  self.rightedge.css({
+    opacity:0
+  })
+
+  var edgewidth = this.options.edgewidth || 10;
+  var leftrotatededge = this.leftedge.find('.leafedge').css({
+    width:edgewidth + 'px',
+    left:-(edgewidth/2) + 'px'
+  })
+
+  var rightrotatededge = this.rightedge.find('.leafedge').css({
+    width:edgewidth + 'px',
+    right:-(edgewidth/2) + 'px'
+  })
+
+  setRotation(leftrotatededge, 90);
+  setRotation(rightrotatededge, 90);
+
+  this.backs.append(this.rightedge);
+  this.backs.append(this.leftedge);
+}
+
 PageTurner.prototype.resize = function(){
   this.size = {
     width:this.book.width(),
@@ -518,7 +998,8 @@ PageTurner.prototype.resize = function(){
   this.base.width(this.size.width).height(this.size.height);
 
   if(this.is3d){
-    this.leaves.width(this.size.width).height(this.size.height);
+    this.fronts.width(this.size.width).height(this.size.height);
+    this.backs.width(this.size.width).height(this.size.height);
     this.book.find('.leaf, .leafholder').width(this.size.width).height(this.size.height);  
   }
   
@@ -532,7 +1013,9 @@ PageTurner.prototype.get_page_html = function(index){
 
 /*
 
-  gets the set index of page written into the GUI
+  create the DOM structure ready for page X to turn +/- 1
+
+
   
 */
 PageTurner.prototype.load_page = function(index){
@@ -541,48 +1024,71 @@ PageTurner.prototype.load_page = function(index){
   self.emit('load', index);
   this.currentpage = index;
 
-  this.baseleft = this.create_leaf('left', this.get_page_html(this.is3d ? index-1 : index));
-  this.baseright = this.create_leaf('right', this.get_page_html(this.is3d ? index+1 : index));
+  /*
+  
+    create the base leaves
 
+    if we are not 3d then these are the actual pages
+    
+  */
+  this.baseleft = this.create_leaf('left', this.get_page_html(this.is3d ? index-1 : index)).css({
+    display:'block'
+  })
+  this.baseright = this.create_leaf('right', this.get_page_html(this.is3d ? index+1 : index)).css({
+    display:'block'
+  })
+
+  
   if(this.is3d){
-    this.leafleft = this.create_double_leaf(this.page_html[index-1], this.page_html[index]);
-    this.leafright = this.create_double_leaf(this.page_html[index], this.page_html[index+1]);
+
+    this.leftback = this.create_leaf('right', this.get_page_html(index-1), true).css({
+      display:'block'
+    })
+    this.leftfront = this.create_leaf('left', this.get_page_html(index), true).css({
+      display:'block'
+    })
+
+    this.rightback = this.create_leaf('left', this.get_page_html(index+1), true).css({
+      display:'block'
+    })
+    this.rightfront = this.create_leaf('right', this.get_page_html(index), true).css({
+      display:'block'
+    })
+
+    //this.leafleft = this.create_double_leaf(this.page_html[index-1], this.page_html[index]);
+    //this.leafright = this.create_double_leaf(this.page_html[index], this.page_html[index+1]);
   }
   
-  var existingbase = this.base.find('.leaf');
-  var existingleaves = this.leaves.find('.leafholder');
 
-  this.baseright.css({
-    display:'block'
-  })
-  this.baseleft.css({
-    display:'block'
-  })
+  var existingbase = this.base.find('.leaf');
+
+  var frontexistingleaves = this.fronts.find('.leaf');
+  var backexistingleaves = this.backs.find('.leaf');
+
   this.base.prepend(this.baseright).prepend(this.baseleft);
 
-  self.processmask(this.baseleft, 1);
-  self.processmask(this.baseright, 1);
+  self.processmask(this.baseleft, 0);
+  self.processmask(this.baseright, 0);
 
   if(this.is3d){
-    this.leafright.css({
-      display:'block'
-    })
-    this.leafleft.css({
-      display:'block'
-    })
 
-    this.leaves.prepend(this.leafright).prepend(this.leafleft);
+    self.processmask(this.leftfront, 0);
+    self.processmask(this.rightfront, 0);
+    self.processmask(this.leftback, 0);
+    self.processmask(this.rightback, 0);
 
-    setRotation(this.leafright, 180);
+    setRotation(this.leftback, -90);
+    setRotation(this.rightback, 90);
+    
+    
+    this.fronts.append(this.rightfront);
+    this.fronts.append(this.leftfront)
 
-    this.leafleft.find('.leaf').each(function(i){
-      self.processmask($(this), 1);
-    })
-
-    this.leafright.find('.leaf').each(function(i){
-      self.processmask($(this));
-    })
+    
+    this.backs.append(this.rightback);
+    this.backs.append(this.leftback)
   }
+
 
   setTimeout(function(){
 
@@ -591,17 +1097,11 @@ PageTurner.prototype.load_page = function(index){
     })
 
     if(self.is3d){
-      existingleaves.fadeOut(200, function(){
-        existingleaves.remove();
+      frontexistingleaves.fadeOut(200, function(){
+        frontexistingleaves.remove();
       })
-      
-      
-      self.leafright.css({
-        display:'block'
-      })
-
-      self.leafleft.css({
-        display:'block'
+      backexistingleaves.fadeOut(200, function(){
+        backexistingleaves.remove();
       })
     }
 
@@ -610,6 +1110,8 @@ PageTurner.prototype.load_page = function(index){
       self.emit('loaded', index);
     }, 200)
   }, 200);
+
+  this.build_edges();
 }
 
 PageTurner.prototype.processmask = function(leaf, val){
@@ -632,61 +1134,15 @@ PageTurner.prototype.processmask = function(leaf, val){
   create an element that is one page of content masked either left or right
   
 */
-PageTurner.prototype.create_leaf = function(side, html, domask){
+PageTurner.prototype.create_leaf = function(side, html, withedge){
   var leaf = $('<div class="leaf nobackside"><div class="content">' + html + '</div></div>');
   if(this.options.apply_pageclass){
     leaf.find('.content').addClass(this.options.apply_pageclass);
   }
   leaf.attr('data-side', side);
   leaf.width(this.size.width).height(this.size.height);
-  return leaf;
-}
-
-PageTurner.prototype.create_double_leaf = function(beforehtml, afterhtml){
-  var beforeleaf = this.create_leaf('right', beforehtml, true);
-  var afterleaf = this.create_leaf('left', afterhtml, true);
-  beforeleaf.addClass('beforeleaf');
-  afterleaf.addClass('afterleaf');
-  var double_leaf = $('<div class="leafholder maintain3d"></div>');  
-  var edge = $('<div class="nobackside leafedge"></div>');  
-  double_leaf.width(this.size.width).height(this.size.height);
-  double_leaf.append(afterleaf).append(beforeleaf);
-  double_leaf.append(edge);
-  double_leaf.before = beforeleaf;
-  double_leaf.after = afterleaf;
-  setRotation(beforeleaf, 180);
-  setRotation(edge, -90);
-  return double_leaf;
-}
-
-/*
-
-  animate the book after having shifted the pages around so a non-sequential page is the target
   
-*/
-PageTurner.prototype.animate_index = function(index){
-  var self = this;
-
-  var side = index>this.currentpage ? 'right' : 'left';
-  var direction = index>this.currentpage ? 1 : -1;
-  var leafname = index>this.currentpage ? 'afterleaf' : 'beforeleaf';
-
-  if(!this.is3d){
-    self.emit('animate', side);
-    self.emit('animated', side);
-    this.load_page(index);
-    return;
-  }
-
-  var basehtml = this.get_page_html(index);
-  var base = this['base' + side];
-  base.find('.content').html(basehtml);
-
-  var leaf = this['leaf' + side];
-  leaf.find('.' + leafname + ' .content').html(basehtml);
-  setTimeout(function(){
-    self.animate_direction(direction, index);
-  }, 500)
+  return leaf;
 }
 
 
@@ -723,7 +1179,6 @@ PageTurner.prototype.animate_direction = function(direction, nextpage){
     return;
   }
 
-  
   if(arguments.length<=1){
     nextpage = this.currentpage + direction;  
 
@@ -734,43 +1189,141 @@ PageTurner.prototype.animate_direction = function(direction, nextpage){
 
   var side = direction<0 ? 'left' : 'right';
   var otherside = (side=='left' ? 'right' : 'left');
-  var leaf = this['leaf' + side];
-  var otherleaf = this['leaf' + otherside];
-  var base = this['base' + side];
-  var otherbase = this['base' + otherside];
+
+  console.log('-------------------------------------------');
+  console.log('anim: ' + this.is3d);
 
   if(!this.is3d){
-    self.emit('animate', side);
-    self.emit('animated', side);
+    self.emit('animate', side, nextpage);
+    self.emit('animated', side, nextpage);
     this.load_page(nextpage);
     return;
   }
 
-  self.active = false;  
+  var direction = side=='left' ? 1 : -1;
 
-  base.css({
-    display:'block'
+
+  var edge_target_rotation = side=='left' ? 180 : -180;
+  var edge_middle_rotation = side=='left' ? 90 : -90;
+  var edge_reset_rotation = side=='left' ? -180 : 180;
+
+  var frontleaf = this[side + 'front'];
+  var backleaf = this[side + 'back'];
+  var edge = this[side + 'edge'];
+
+  self.processmask(frontleaf, 5);
+  self.processmask(backleaf, 5);
+
+  //this.frontleafelems.append(frontleaf);
+  //this.leafelems.append(backleaf);
+
+  // initial setup
+  //setRotation(this.leftback, -90);
+  //setRotation(this.rightback, 90);
+
+  //setRotation(edge, side=='left' ? 0 : 180);
+
+  edge.css({
+    opacity:1
   })
 
-  otherleaf.insertBefore(leaf);
+  setupAnimator(edge, 'after', self.options.animtime/2, function(){
+    
+    setupAnimator(edge, 'before', self.options.animtime/2, function(){
+      
+      edge.css({
+        opacity:0
+      })
+
+    })
+
+    setRotation(edge, edge_target_rotation);
+    
+  });
+
+  setupAnimator(frontleaf, 'after', self.options.animtime/2, function(){
+
+    frontleaf.css({
+      opacity:0
+    })
+
+    setupAnimator(backleaf, 'before', self.options.animtime/2, function(){
+
+      self.emit('animated', side, nextpage);
+      self.load_page(nextpage);
+    })
+    setRotation(backleaf, 0);
+  });
+
+  self.emit('animate', side, nextpage);
+
+  removeAnimator(backleaf);
+  setRotation(frontleaf, direction * 90);
+  setRotation(edge, edge_middle_rotation);
+  
+/*
+  var frontleaf = this[side + 'front'];
+  var backleaf = this[side + 'back'];
+
+  self.active = false;  
+
 
   leaf.find('.leaf').each(function(i){
     self.processmask($(this), self.options.masksize);
   })
 
 
-  setAnimationTime(leaf, self.options.animtime);
-  setRotation(leaf, side=='left' ? 180 : 0);
+  setupAnimator(frontleaf, self.options.animtime, function(){
+    console.log('-------------------------------------------');
+    console.log('animate callback!');
+  });
 
-  self.emit('animate', side);
+  setRotation(frontleaf, side=='left' ? 45 : 45);
+
+//  self.emit('animate', side, nextpage);
 
   setTimeout(function(){
-    self.emit('animated', side);
+    self.emit('animated', side, nextpage);
     self.load_page(nextpage);
   }, self.options.animtime + 10)
+*/
 
 }
 
+
+
+
+
+
+/*
+
+  animate the book after having shifted the pages around so a non-sequential page is the target
+  
+*/
+PageTurner.prototype.animate_index = function(index){
+  var self = this;
+
+  var side = index>this.currentpage ? 'right' : 'left';
+  var direction = index>this.currentpage ? 1 : -1;
+  var leafname = index>this.currentpage ? 'afterleaf' : 'beforeleaf';
+
+  if(!this.is3d){
+    self.emit('animate', side, index);
+    self.emit('animated', side, index);
+    this.load_page(index);
+    return;
+  }
+
+  var basehtml = this.get_page_html(index);
+  var base = this['base' + side];
+  base.find('.content').html(basehtml);
+
+  var leaf = this['leaf' + side];
+  leaf.find('.' + leafname + ' .content').html(basehtml);
+  setTimeout(function(){
+    self.animate_direction(direction, index);
+  }, 500)
+}
 
 
 
@@ -815,9 +1368,31 @@ function setRotation(elem, amount){
   setLeafTransform(elem);
 }
 
-function setAnimationTime(elem, ms){
+var easings = {
+  'linear':'cubic-bezier(0.250, 0.250, 0.750, 0.750)',
+  'easein':'cubic-bezier(0.420, 0.000, 1.000, 1.000)',
+  'easeout':'cubic-bezier(0.000, 0.000, 0.580, 1.000)'
+}
+
+function setupAnimator(elem, sequence, ms, fn){
+  //var easingname = sequence=='before' ? 'easeout' : 'easein';
+  var easingname = sequence=='before' ? 'easein' : 'easeout';
+  var easing = easings[easingname];
+
   ['', '-webkit-', '-moz-', '-ms-', '-o-'].forEach(function(prefix){
-    elem.css(prefix + 'transition', 'all ' + ms + 'ms');
+    elem.css(prefix + 'transition-timing-function', easing);
+    elem.css(prefix + 'transition', 'all ' + ms + 'ms ' + easing);
+  })
+
+  afterTransition.once(elem.get(0), function(){
+    fn && fn();
+  });
+}
+
+function removeAnimator(elem){
+  ['', '-webkit-', '-moz-', '-ms-', '-o-'].forEach(function(prefix){
+    elem.css(prefix + 'transition-timing-function', '');
+    elem.css(prefix + 'transition', '');
   })
 }
 
@@ -828,7 +1403,7 @@ function setPerspective(elem, amount){
 }
 });
 require.register("binocarlos-pageturner/templates/booktemplate.js", function(exports, require, module){
-module.exports = '<div class="pageturner-book">\n	<div id="base">\n\n	</div>\n	<div id="leaves">\n\n	</div>\n</div>';
+module.exports = '<div class="pageturner-book">\n	<div id="base">\n\n	</div>\n	<div id="fronts">\n\n	</div>\n	<div id="backs">\n\n	</div>\n	<div id="edges">\n\n	</div>\n</div>';
 });
 require.register("component-hammer.js/index.js", function(exports, require, module){
 /*
@@ -11458,6 +12033,9 @@ module.exports = function (options){
 
 
 
+
+
+
 require.alias("binocarlos-pageturner/index.js", "buddy/deps/pageturner/index.js");
 require.alias("binocarlos-pageturner/templates/booktemplate.js", "buddy/deps/pageturner/templates/booktemplate.js");
 require.alias("binocarlos-pageturner/index.js", "buddy/deps/pageturner/index.js");
@@ -11472,6 +12050,24 @@ require.alias("component-transform-property/index.js", "binocarlos-pageturner/de
 
 require.alias("component-jquery/index.js", "binocarlos-pageturner/deps/jquery/index.js");
 
+require.alias("pgherveou-transitionend/index.js", "binocarlos-pageturner/deps/transitionend/index.js");
+require.alias("pgherveou-transitionend/index.js", "binocarlos-pageturner/deps/transitionend/index.js");
+require.alias("pgherveou-prefix/index.js", "pgherveou-transitionend/deps/prefix/index.js");
+require.alias("pgherveou-prefix/index.js", "pgherveou-transitionend/deps/prefix/index.js");
+require.alias("pgherveou-prefix/index.js", "pgherveou-prefix/index.js");
+require.alias("pgherveou-transitionend/index.js", "pgherveou-transitionend/index.js");
+require.alias("anthonyshort-after-transition/index.js", "binocarlos-pageturner/deps/after-transition/index.js");
+require.alias("anthonyshort-after-transition/index.js", "binocarlos-pageturner/deps/after-transition/index.js");
+require.alias("anthonyshort-has-transitions/index.js", "anthonyshort-after-transition/deps/has-transitions/index.js");
+require.alias("anthonyshort-has-transitions/index.js", "anthonyshort-after-transition/deps/has-transitions/index.js");
+require.alias("anthonyshort-has-transitions/index.js", "anthonyshort-has-transitions/index.js");
+require.alias("anthonyshort-css-emitter/index.js", "anthonyshort-after-transition/deps/css-emitter/index.js");
+require.alias("component-emitter/index.js", "anthonyshort-css-emitter/deps/emitter/index.js");
+require.alias("component-indexof/index.js", "component-emitter/deps/indexof/index.js");
+
+require.alias("component-event/index.js", "anthonyshort-css-emitter/deps/event/index.js");
+
+require.alias("anthonyshort-after-transition/index.js", "anthonyshort-after-transition/index.js");
 require.alias("binocarlos-pageturner/index.js", "binocarlos-pageturner/index.js");
 require.alias("component-hammer.js/index.js", "buddy/deps/hammer/index.js");
 require.alias("component-hammer.js/index.js", "hammer/index.js");
