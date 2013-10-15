@@ -692,22 +692,26 @@ require.register("binocarlos-pageturner/index.js", function(exports, require, mo
   Page Turner
 
 
-                        ---------------- Turning Pair (a single page turn = 2 leafs turning at the same time)
+Turning Pair (a single page turn = 2 leafs turning at the same time)
+One turns till halfway then triggers the other leaf (which is vertical)
+to complete it's turn
+                        |
+                        |----------
                         |         |       
                         \        /
-                        -        _
-                        -\      /_ 
-                        - \    / _ ----- Turning Leaf (one of the 4 hot pages as 1/2 of a book page)  
-                        -  \  /  _
+                        -        _ ----- Turning Leaf
+                        -\      /_       (one of the 4 hot pages 
+                        - \    / _       prev-right + current-left
+                        -  \  /  _       next-left + current-right
     -----------------------------_-------------------
     |                   -   |    _                  |
-    |                   -   |    _                  | 
-    |                   -   |    _                  |
-    |                   -   |    _                  |
-    |                   -   |    _                  |---- Base leaf (single sided leaf from prev / next page)
     |                   -   |    _                  |
     |                   -   |    _                  |
     |                   -   |    _                  |
+    |                   -   |    _                  |---- Base leaf 
+    |                   -   |    _                  |     single sided 
+    |                   -   |    _                  |     leafs from the
+    |                   -   |    _                  |     prev / next pages
     |                   -   |    _                  |
     |                   -   |    _                  |
     |                    \  |  /                    |
@@ -771,8 +775,6 @@ function PageTurner(options){
   this.options = options;
   this.is3d = has3d && options.has3d;
 
-  console.log('-------------------------------------------');
-  console.log('3d = ' + this.is3d);
   this.page_html = [];
   this.currentpage = 0;
 
@@ -1077,8 +1079,14 @@ PageTurner.prototype.load_page = function(index){
     self.processmask(this.leftback, 0);
     self.processmask(this.rightback, 0);
 
-    setRotation(this.leftback, -90);
-    setRotation(this.rightback, 90);
+    setRotation(this.leftback, -90.1);
+    setRotation(this.rightback, 89.9);
+    this.leftback.css({
+      opacity:0
+    })
+    this.rightback.css({
+      opacity:0
+    })
     
     
     this.fronts.append(this.rightfront);
@@ -1190,9 +1198,6 @@ PageTurner.prototype.animate_direction = function(direction, nextpage){
   var side = direction<0 ? 'left' : 'right';
   var otherside = (side=='left' ? 'right' : 'left');
 
-  console.log('-------------------------------------------');
-  console.log('anim: ' + this.is3d);
-
   if(!this.is3d){
     self.emit('animate', side, nextpage);
     self.emit('animated', side, nextpage);
@@ -1237,7 +1242,7 @@ PageTurner.prototype.animate_direction = function(direction, nextpage){
 
     })
 
-    setRotation(edge, edge_target_rotation);
+    setRotation(edge, edge_target_rotation);  
     
   });
 
@@ -1247,12 +1252,19 @@ PageTurner.prototype.animate_direction = function(direction, nextpage){
       opacity:0
     })
 
+    backleaf.css({
+      opacity:1
+    })
+
     setupAnimator(backleaf, 'before', self.options.animtime/2, function(){
 
       self.emit('animated', side, nextpage);
       self.load_page(nextpage);
     })
+
     setRotation(backleaf, 0);
+    
+    
   });
 
   self.emit('animate', side, nextpage);
@@ -1316,10 +1328,17 @@ PageTurner.prototype.animate_index = function(index){
 
   var basehtml = this.get_page_html(index);
   var base = this['base' + side];
-  base.find('.content').html(basehtml);
+
+  if(base){
+    base.find('.content').html(basehtml);  
+  }
+  
 
   var leaf = this['leaf' + side];
-  leaf.find('.' + leafname + ' .content').html(basehtml);
+  if(leaf){
+    leaf.find('.' + leafname + ' .content').html(basehtml);  
+  }
+  
   setTimeout(function(){
     self.animate_direction(direction, index);
   }, 500)
@@ -1376,12 +1395,12 @@ var easings = {
 
 function setupAnimator(elem, sequence, ms, fn){
   //var easingname = sequence=='before' ? 'easeout' : 'easein';
-  var easingname = sequence=='before' ? 'easein' : 'easeout';
+  var easingname = sequence=='before' ? 'easeout' : 'easein';
   var easing = easings[easingname];
 
   ['', '-webkit-', '-moz-', '-ms-', '-o-'].forEach(function(prefix){
     elem.css(prefix + 'transition-timing-function', easing);
-    elem.css(prefix + 'transition', 'all ' + ms + 'ms ' + easing);
+    elem.css(prefix + 'transition', prefix + 'transform ' + ms + 'ms ' + easing);
   })
 
   afterTransition.once(elem.get(0), function(){
