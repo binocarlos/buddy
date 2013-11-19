@@ -1100,15 +1100,15 @@ PageTurner.prototype.load_page = function(index){
 
   setTimeout(function(){
 
-    existingbase.fadeOut(200, function(){
+    existingbase.fadeOut(100, function(){
       existingbase.remove();
     })
 
     if(self.is3d){
-      frontexistingleaves.fadeOut(200, function(){
+      frontexistingleaves.fadeOut(100, function(){
         frontexistingleaves.remove();
       })
-      backexistingleaves.fadeOut(200, function(){
+      backexistingleaves.fadeOut(100, function(){
         backexistingleaves.remove();
       })
     }
@@ -1116,8 +1116,8 @@ PageTurner.prototype.load_page = function(index){
     setTimeout(function(){
       self.active = true;
       self.emit('loaded', index);
-    }, 200)
-  }, 200);
+    }, 100)
+  }, 500);
 
   this.build_edges();
 }
@@ -1183,9 +1183,12 @@ PageTurner.prototype.set_leaf_rotation = function(side, percent){
 */
 PageTurner.prototype.animate_direction = function(direction, nextpage){
   var self = this;
+
   if(!self.active){
     return;
   }
+
+  self.active = false;
 
   if(arguments.length<=1){
     nextpage = this.currentpage + direction;  
@@ -1229,18 +1232,22 @@ PageTurner.prototype.animate_direction = function(direction, nextpage){
   //setRotation(edge, side=='left' ? 0 : 180);
 
   edge.css({
-    opacity:1
+    opacity:0
   })
 
   setupAnimator(edge, 'after', self.options.animtime/2, function(){
     
     setupAnimator(edge, 'before', self.options.animtime/2, function(){
       
+      
+
+    })
+
+    setTimeout(function(){
       edge.css({
         opacity:0
       })
-
-    })
+    }, (3*self.options.animtime)/8);
 
     setRotation(edge, edge_target_rotation);  
     
@@ -1266,6 +1273,12 @@ PageTurner.prototype.animate_direction = function(direction, nextpage){
     
     
   });
+
+  setTimeout(function(){
+    edge.css({
+      opacity:1
+    })
+  }, self.options.animtime/8);
 
   self.emit('animate', side, nextpage);
 
@@ -1315,6 +1328,11 @@ PageTurner.prototype.animate_direction = function(direction, nextpage){
 PageTurner.prototype.animate_index = function(index){
   var self = this;
 
+  if(!self.active){
+    return;
+  }
+
+  self.active = false;
   var side = index>this.currentpage ? 'right' : 'left';
   var direction = index>this.currentpage ? 1 : -1;
   var leafname = index>this.currentpage ? 'afterleaf' : 'beforeleaf';
@@ -1334,9 +1352,10 @@ PageTurner.prototype.animate_index = function(index){
   }
   
 
-  var leaf = this['leaf' + side];
+  var leaf = this[side + 'back'];
+
   if(leaf){
-    leaf.find('.' + leafname + ' .content').html(basehtml);  
+    leaf.find(' .content').html(basehtml);  
   }
   
   setTimeout(function(){
@@ -1395,7 +1414,7 @@ var easings = {
 
 function setupAnimator(elem, sequence, ms, fn){
   //var easingname = sequence=='before' ? 'easeout' : 'easein';
-  var easingname = sequence=='before' ? 'easeout' : 'easein';
+  var easingname = sequence=='before' ? 'easein' : 'easeout';
   var easing = easings[easingname];
 
   ['', '-webkit-', '-moz-', '-ms-', '-o-'].forEach(function(prefix){

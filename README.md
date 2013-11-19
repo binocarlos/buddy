@@ -37,7 +37,7 @@ First you need some content that Buddy will turn into a book:
     Buddy likes humans when they give him fish.
   </div>
   <div class="page">
-    Buddy thinks humans are stupid because they give him fish.
+    Buddy likes chips with his fish.
   </div>
 </div>
 ```
@@ -48,13 +48,10 @@ Then - tell buddy about your book:
 var Buddy = require('buddy');
 var book = new Buddy({
   selector:'#book',
+  touch_selector:'#book',
   page_selector:'.page'
 });
 ```
-
-## Turning Pages
-
-Buddy can handle touch events so users can turn pages - however, you can build galleries of thumbnails and manually trigger the page.
 
 ### animate_direction
 
