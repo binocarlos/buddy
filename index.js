@@ -24,6 +24,7 @@ module.exports = function (options){
   var page_selector = options.page_selector || '.page';
   var touch_selector = options.touch_selector || book_selector;
   var apply_pageclass = options.apply_pageclass || 'bookpage';
+  var edgewidth = options.edgewidth || 10;
   var perspective = options.perspective || 950;
   var is_3d = typeof(options.is_3d)==='boolean' ? options.is_3d : true;
   var startpage = options.test_page || 0;
@@ -70,6 +71,7 @@ module.exports = function (options){
     pageselector:page_selector,
     apply_pageclass:apply_pageclass,
     startpage:startpage,
+    edgewidth:edgewidth,
     perspective:perspective
   })
 
@@ -125,6 +127,11 @@ module.exports = function (options){
 
   })
 
+  book.on('canceldrag', function(index){
+    dragging = true;
+    book.active = true;
+  })
+
   book.on('loaded', function(index){
 
     loading = false;
@@ -135,6 +142,8 @@ module.exports = function (options){
     }
     else if(index!=currentindex){
       book.emit('view:page', index);
+      dragging = true;
+      book.active = true;
     }
 
     currentindex = index;
@@ -142,24 +151,10 @@ module.exports = function (options){
 
   book.on('animate', function(side){
 
-    if(book.currentpage==1 && side=='left'){
-      apply_shadow(0);
-    }
-    else if(book.currentpage==pagecount-2 && side=='right'){
-      apply_shadow(pagecount-1);
-    }
-
     animating = true;
   })
 
   book.on('animated', function(side){
-
-    if(book.currentpage==0 && side=='right'){
-      apply_shadow(1);
-    }
-    else if(book.currentpage==pagecount-1 && side=='left'){
-      apply_shadow(pagecount-2);
-    }
 
     animating = false;
   })
@@ -200,14 +195,27 @@ module.exports = function (options){
 
       dragging = false;
 
-      if(animating || loading){
-        book.triggernext = function(){
-          book.animate_direction(ev.direction=='left' ? 1 : -1);
-        }
+      var direction = ev.direction=='left' ? 1 : -1;
+
+      var nextpage = book.currentpage + direction;
+
+      if(nextpage<0){
         return;
       }
+      else if(nextpage>=book.page_html.length){
+        return;
+      }
+      
+      if(animating || loading){
+        book.triggernext = function(){
+          book.emit('drag', ev.direction);
+          book.animate_direction(direction);
+        }
+      }
       else{
-        book.animate_direction(ev.direction=='left' ? 1 : -1);  
+        book.emit('drag', ev.direction);
+        book.animate_direction(direction);  
+
       }
     }
   }
@@ -219,9 +227,9 @@ module.exports = function (options){
   hammertime.ontap = function(ev){
 
     var elem = $(ev.originalEvent.srcElement);
-    var book = $(elem).closest('#book');
+    var bookelem = $(elem).closest('#book');
 
-    if(book.length<=0){
+    if(bookelem.length<=0){
       return;
     }
 
