@@ -1,7 +1,7 @@
 // this is the stub
 
 var $ = require('jquery');
-var Hammer = require('hammer');
+var Hammer = require('hammer.js');
 var PageTurner = require('pageturner');
 
 /*
