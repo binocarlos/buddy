@@ -166,6 +166,8 @@ module.exports = function (options){
 
   book.on('load', function(index){
     loading = true;
+
+    
   })
 
   book.on('view:page', function(index){
@@ -219,6 +221,10 @@ module.exports = function (options){
       }
     }
   }
+
+  $(book_selector).mousemove(function(event) {
+    book.emit('move', event);
+  });
 
   hammertime.ondragend = function(ev){
     dragging = false;
