@@ -46,10 +46,18 @@ function require(path, parent, orig) {
 require.modules = {};
 
 /**
- * Registered aliases.
+ * Main definitions.
  */
 
-require.aliases = {};
+require.mains = {};
+
+/**
+ * Define a main.
+ */
+
+require.main = function(name, path){
+  require.mains[name] = path;
+};
 
 /**
  * Resolve `path`.
@@ -66,7 +74,7 @@ require.aliases = {};
  */
 
 require.resolve = function(path) {
-  if (path.charAt(0) === '/') path = path.slice(1);
+  if ('/' == path.charAt(0)) path = path.slice(1);
 
   var paths = [
     path,
@@ -76,10 +84,15 @@ require.resolve = function(path) {
     path + '/index.json'
   ];
 
-  for (var i = 0; i < paths.length; i++) {
+  if (require.mains[path]) {
+    paths = [path + '/' + require.mains[path]];
+  }
+
+  for (var i = 0, len = paths.length; i < len; i++) {
     var path = paths[i];
-    if (require.modules.hasOwnProperty(path)) return path;
-    if (require.aliases.hasOwnProperty(path)) return require.aliases[path];
+    if (require.modules.hasOwnProperty(path)) {
+      return path;
+    }
   }
 };
 
@@ -100,7 +113,7 @@ require.normalize = function(curr, path) {
   curr = curr.split('/');
   path = path.split('/');
 
-  for (var i = 0; i < path.length; ++i) {
+  for (var i = 0, len = path.length; i < len; ++i) {
     if ('..' == path[i]) {
       curr.pop();
     } else if ('.' != path[i] && '' != path[i]) {
@@ -124,21 +137,6 @@ require.register = function(path, definition) {
 };
 
 /**
- * Alias a module definition.
- *
- * @param {String} from
- * @param {String} to
- * @api private
- */
-
-require.alias = function(from, to) {
-  if (!require.modules.hasOwnProperty(from)) {
-    throw new Error('Failed to alias "' + from + '", it does not exist');
-  }
-  require.aliases[to] = from;
-};
-
-/**
  * Return a require function relative to the `parent` path.
  *
  * @param {String} parent
@@ -147,7 +145,7 @@ require.alias = function(from, to) {
  */
 
 require.relative = function(parent) {
-  var p = require.normalize(parent, '..');
+  var root = require.normalize(parent, '..');
 
   /**
    * lastIndexOf helper.
@@ -177,15 +175,7 @@ require.relative = function(parent) {
   localRequire.resolve = function(path) {
     var c = path.charAt(0);
     if ('/' == c) return path.slice(1);
-    if ('.' == c) return require.normalize(p, path);
-
-    // resolve deps by returning
-    // the dep in the nearest "deps"
-    // directory
-    var segs = parent.split('/');
-    var i = lastIndexOf(segs, 'deps') + 1;
-    if (!i) i = 0;
-    path = segs.slice(0, i + 1).join('/') + '/deps/' + path;
+    if ('.' == c) return require.normalize(root, path);
     return path;
   };
 
@@ -199,22 +189,7 @@ require.relative = function(parent) {
 
   return localRequire;
 };
-require.register("component-indexof/index.js", function(exports, require, module){
-module.exports = function(arr, obj){
-  if (arr.indexOf) return arr.indexOf(obj);
-  for (var i = 0; i < arr.length; ++i) {
-    if (arr[i] === obj) return i;
-  }
-  return -1;
-};
-});
 require.register("component-emitter/index.js", function(exports, require, module){
-
-/**
- * Module dependencies.
- */
-
-var index = require('indexof');
 
 /**
  * Expose `Emitter`.
@@ -256,7 +231,8 @@ function mixin(obj) {
  * @api public
  */
 
-Emitter.prototype.on = function(event, fn){
+Emitter.prototype.on =
+Emitter.prototype.addEventListener = function(event, fn){
   this._callbacks = this._callbacks || {};
   (this._callbacks[event] = this._callbacks[event] || [])
     .push(fn);
@@ -282,7 +258,7 @@ Emitter.prototype.once = function(event, fn){
     fn.apply(this, arguments);
   }
 
-  fn._off = on;
+  on.fn = fn;
   this.on(event, on);
   return this;
 };
@@ -299,7 +275,8 @@ Emitter.prototype.once = function(event, fn){
 
 Emitter.prototype.off =
 Emitter.prototype.removeListener =
-Emitter.prototype.removeAllListeners = function(event, fn){
+Emitter.prototype.removeAllListeners =
+Emitter.prototype.removeEventListener = function(event, fn){
   this._callbacks = this._callbacks || {};
 
   // all
@@ -319,8 +296,14 @@ Emitter.prototype.removeAllListeners = function(event, fn){
   }
 
   // remove specific handler
-  var i = index(callbacks, fn._off || fn);
-  if (~i) callbacks.splice(i, 1);
+  var cb;
+  for (var i = 0; i < callbacks.length; i++) {
+    cb = callbacks[i];
+    if (cb === fn || cb.fn === fn) {
+      callbacks.splice(i, 1);
+      break;
+    }
+  }
   return this;
 };
 
@@ -375,7 +358,7 @@ Emitter.prototype.hasListeners = function(event){
 });
 require.register("component-has-translate3d/index.js", function(exports, require, module){
 
-var prop = require('transform-property');
+var prop = require("component-transform-property");
 // IE8<= doesn't have `getComputedStyle`
 if (!prop || !window.getComputedStyle) return module.exports = false;
 
@@ -410,13 +393,13 @@ var el = document.createElement('p');
 var style;
 
 for (var i = 0; i < styles.length; i++) {
-  style = styles[i];
-  if (null != el.style[style]) {
-    module.exports = style;
+  if (null != el.style[styles[i]]) {
+    style = styles[i];
     break;
   }
 }
 
+module.exports = style;
 });
 require.register("pgherveou-prefix/index.js", function(exports, require, module){
 // module globals
@@ -477,7 +460,7 @@ require.register("pgherveou-transitionend/index.js", function(exports, require, 
  * module dependencies
  */
 
-var prefix = require('prefix');
+var prefix = require("pgherveou-prefix");
 
 // transitionend mapping
 // src: https://github.com/twitter/bootstrap/issues/2870
@@ -544,6 +527,9 @@ function hasTransitions(el){
 module.exports = hasTransitions;
 });
 require.register("component-event/index.js", function(exports, require, module){
+var bind = window.addEventListener ? 'addEventListener' : 'attachEvent',
+    unbind = window.removeEventListener ? 'removeEventListener' : 'detachEvent',
+    prefix = bind !== 'addEventListener' ? 'on' : '';
 
 /**
  * Bind `el` event `type` to `fn`.
@@ -557,11 +543,7 @@ require.register("component-event/index.js", function(exports, require, module){
  */
 
 exports.bind = function(el, type, fn, capture){
-  if (el.addEventListener) {
-    el.addEventListener(type, fn, capture || false);
-  } else {
-    el.attachEvent('on' + type, fn);
-  }
+  el[bind](prefix + type, fn, capture || false);
   return fn;
 };
 
@@ -577,21 +559,16 @@ exports.bind = function(el, type, fn, capture){
  */
 
 exports.unbind = function(el, type, fn, capture){
-  if (el.removeEventListener) {
-    el.removeEventListener(type, fn, capture || false);
-  } else {
-    el.detachEvent('on' + type, fn);
-  }
+  el[unbind](prefix + type, fn, capture || false);
   return fn;
 };
-
 });
 require.register("anthonyshort-css-emitter/index.js", function(exports, require, module){
 /**
  * Module Dependencies
  */
 
-var events = require('event');
+var events = require("component-event");
 
 // CSS events
 
@@ -667,8 +644,8 @@ CssEmitter.prototype.once = function(fn){
 
 });
 require.register("anthonyshort-after-transition/index.js", function(exports, require, module){
-var hasTransitions = require('has-transitions');
-var emitter = require('css-emitter');
+var hasTransitions = require("anthonyshort-has-transitions");
+var emitter = require("anthonyshort-css-emitter");
 
 function afterTransition(el, callback) {
   if(hasTransitions(el)) {
@@ -740,14 +717,14 @@ to complete it's turn
   
 */
 
-var Emitter = require('emitter');
-var $ = require('jquery');
-var transform = require('transform-property');
-var has3d = require('has-translate3d');
-var transEndEventName = require("transitionend");
-var afterTransition = require('after-transition');
+var Emitter = require("component-emitter");
+var $ = require("component-jquery");
+var transform = require("component-transform-property");
+var has3d = require("component-has-translate3d");
+var transEndEventName = require("pgherveou-transitionend");
+var afterTransition = require("anthonyshort-after-transition");
 
-var template = require('./templates/booktemplate.js');
+var template = require("./templates/booktemplate.js");
 
 module.exports = PageTurner;
 
@@ -1095,6 +1072,8 @@ PageTurner.prototype.load_page = function(index){
     
     this.backs.append(this.rightback);
     this.backs.append(this.leftback)
+
+    this.emit('pagebuilt');
   }
 
 
@@ -1194,9 +1173,12 @@ PageTurner.prototype.animate_direction = function(direction, nextpage){
     nextpage = this.currentpage + direction;  
 
     if(nextpage<0 || nextpage>=this.page_html.length){
+      self.emit('canceldrag');
       return;
     }
   }
+
+  this.emit('load', nextpage);
 
   var side = direction<0 ? 'left' : 'right';
   var otherside = (side=='left' ? 'right' : 'left');
@@ -1209,7 +1191,6 @@ PageTurner.prototype.animate_direction = function(direction, nextpage){
   }
 
   var direction = side=='left' ? 1 : -1;
-
 
   var edge_target_rotation = side=='left' ? 180 : -180;
   var edge_middle_rotation = side=='left' ? 90 : -90;
@@ -1283,6 +1264,7 @@ PageTurner.prototype.animate_direction = function(direction, nextpage){
   self.emit('animate', side, nextpage);
 
   removeAnimator(backleaf);
+
   setRotation(frontleaf, direction * 90);
   setRotation(edge, edge_middle_rotation);
   
@@ -1348,17 +1330,18 @@ PageTurner.prototype.animate_index = function(index){
   var base = this['base' + side];
 
   if(base){
-    base.find('.content').html(basehtml);  
+    base.find('.content').html(basehtml);
   }
   
 
   var leaf = this[side + 'back'];
 
   if(leaf){
-    leaf.find(' .content').html(basehtml);  
+    leaf.find(' .content').html(basehtml);
   }
   
   setTimeout(function(){
+    self.active = true;
     self.animate_direction(direction, index);
   }, 500)
 }
@@ -11822,9 +11805,9 @@ if ( typeof define === "function" && define.amd && define.amd.jQuery ) {
 require.register("buddy/index.js", function(exports, require, module){
 // this is the stub
 
-var $ = require('jquery');
-var Hammer = require('hammer');
-var PageTurner = require('pageturner');
+var $ = require("component-jquery");
+var Hammer = require("component-hammer.js");
+var PageTurner = require("binocarlos-pageturner");
 
 /*
 
@@ -11846,6 +11829,7 @@ module.exports = function (options){
   var page_selector = options.page_selector || '.page';
   var touch_selector = options.touch_selector || book_selector;
   var apply_pageclass = options.apply_pageclass || 'bookpage';
+  var edgewidth = options.edgewidth || 10;
   var perspective = options.perspective || 950;
   var is_3d = typeof(options.is_3d)==='boolean' ? options.is_3d : true;
   var startpage = options.test_page || 0;
@@ -11892,6 +11876,7 @@ module.exports = function (options){
     pageselector:page_selector,
     apply_pageclass:apply_pageclass,
     startpage:startpage,
+    edgewidth:edgewidth,
     perspective:perspective
   })
 
@@ -11947,6 +11932,11 @@ module.exports = function (options){
 
   })
 
+  book.on('canceldrag', function(index){
+    dragging = true;
+    book.active = true;
+  })
+
   book.on('loaded', function(index){
 
     loading = false;
@@ -11957,6 +11947,8 @@ module.exports = function (options){
     }
     else if(index!=currentindex){
       book.emit('view:page', index);
+      dragging = true;
+      book.active = true;
     }
 
     currentindex = index;
@@ -11964,24 +11956,10 @@ module.exports = function (options){
 
   book.on('animate', function(side){
 
-    if(book.currentpage==1 && side=='left'){
-      apply_shadow(0);
-    }
-    else if(book.currentpage==pagecount-2 && side=='right'){
-      apply_shadow(pagecount-1);
-    }
-
     animating = true;
   })
 
   book.on('animated', function(side){
-
-    if(book.currentpage==0 && side=='right'){
-      apply_shadow(1);
-    }
-    else if(book.currentpage==pagecount-1 && side=='left'){
-      apply_shadow(pagecount-2);
-    }
 
     animating = false;
   })
@@ -11993,6 +11971,8 @@ module.exports = function (options){
 
   book.on('load', function(index){
     loading = true;
+
+    
   })
 
   book.on('view:page', function(index){
@@ -12022,14 +12002,27 @@ module.exports = function (options){
 
       dragging = false;
 
-      if(animating || loading){
-        book.triggernext = function(){
-          book.animate_direction(ev.direction=='left' ? 1 : -1);
-        }
+      var direction = ev.direction=='left' ? 1 : -1;
+
+      var nextpage = book.currentpage + direction;
+
+      if(nextpage<0){
         return;
       }
+      else if(nextpage>=book.page_html.length){
+        return;
+      }
+      
+      if(animating || loading){
+        book.triggernext = function(){
+          book.emit('drag', ev.direction);
+          book.animate_direction(direction);
+        }
+      }
       else{
-        book.animate_direction(ev.direction=='left' ? 1 : -1);  
+        book.emit('drag', ev.direction);
+        book.animate_direction(direction);  
+
       }
     }
   }
@@ -12041,9 +12034,9 @@ module.exports = function (options){
   hammertime.ontap = function(ev){
 
     var elem = $(ev.originalEvent.srcElement);
-    var book = $(elem).closest('#book');
+    var bookelem = $(elem).closest('#book');
 
-    if(book.length<=0){
+    if(bookelem.length<=0){
       return;
     }
 
@@ -12074,43 +12067,10 @@ module.exports = function (options){
 
 
 
-require.alias("binocarlos-pageturner/index.js", "buddy/deps/pageturner/index.js");
-require.alias("binocarlos-pageturner/templates/booktemplate.js", "buddy/deps/pageturner/templates/booktemplate.js");
-require.alias("binocarlos-pageturner/index.js", "buddy/deps/pageturner/index.js");
-require.alias("binocarlos-pageturner/index.js", "pageturner/index.js");
-require.alias("component-emitter/index.js", "binocarlos-pageturner/deps/emitter/index.js");
-require.alias("component-indexof/index.js", "component-emitter/deps/indexof/index.js");
 
-require.alias("component-has-translate3d/index.js", "binocarlos-pageturner/deps/has-translate3d/index.js");
-require.alias("component-transform-property/index.js", "component-has-translate3d/deps/transform-property/index.js");
 
-require.alias("component-transform-property/index.js", "binocarlos-pageturner/deps/transform-property/index.js");
 
-require.alias("component-jquery/index.js", "binocarlos-pageturner/deps/jquery/index.js");
 
-require.alias("pgherveou-transitionend/index.js", "binocarlos-pageturner/deps/transitionend/index.js");
-require.alias("pgherveou-transitionend/index.js", "binocarlos-pageturner/deps/transitionend/index.js");
-require.alias("pgherveou-prefix/index.js", "pgherveou-transitionend/deps/prefix/index.js");
-require.alias("pgherveou-prefix/index.js", "pgherveou-transitionend/deps/prefix/index.js");
-require.alias("pgherveou-prefix/index.js", "pgherveou-prefix/index.js");
-require.alias("pgherveou-transitionend/index.js", "pgherveou-transitionend/index.js");
-require.alias("anthonyshort-after-transition/index.js", "binocarlos-pageturner/deps/after-transition/index.js");
-require.alias("anthonyshort-after-transition/index.js", "binocarlos-pageturner/deps/after-transition/index.js");
-require.alias("anthonyshort-has-transitions/index.js", "anthonyshort-after-transition/deps/has-transitions/index.js");
-require.alias("anthonyshort-has-transitions/index.js", "anthonyshort-after-transition/deps/has-transitions/index.js");
-require.alias("anthonyshort-has-transitions/index.js", "anthonyshort-has-transitions/index.js");
-require.alias("anthonyshort-css-emitter/index.js", "anthonyshort-after-transition/deps/css-emitter/index.js");
-require.alias("component-emitter/index.js", "anthonyshort-css-emitter/deps/emitter/index.js");
-require.alias("component-indexof/index.js", "component-emitter/deps/indexof/index.js");
 
-require.alias("component-event/index.js", "anthonyshort-css-emitter/deps/event/index.js");
 
-require.alias("anthonyshort-after-transition/index.js", "anthonyshort-after-transition/index.js");
-require.alias("binocarlos-pageturner/index.js", "binocarlos-pageturner/index.js");
-require.alias("component-hammer.js/index.js", "buddy/deps/hammer/index.js");
-require.alias("component-hammer.js/index.js", "hammer/index.js");
 
-require.alias("component-jquery/index.js", "buddy/deps/jquery/index.js");
-require.alias("component-jquery/index.js", "jquery/index.js");
-
-require.alias("buddy/index.js", "buddy/index.js");

@@ -1,6 +1,6 @@
 // this is the stub
 
-var $ = require('jquery');
+var $ = require('component-jquery');
 var Hammer = require('hammer.js');
 var PageTurner = require('pageturner');
 
@@ -221,10 +221,6 @@ module.exports = function (options){
       }
     }
   }
-
-  $(book_selector).mousemove(function(event) {
-    book.emit('move', event);
-  });
 
   hammertime.ondragend = function(ev){
     dragging = false;
