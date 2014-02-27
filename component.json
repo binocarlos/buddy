@@ -5,7 +5,7 @@
   "keywords": [],
   "dependencies": {    
     "binocarlos/pageturner": "*",
-    "component/hammer.js": "*",
+    "binocarlos/hammer": "*",
     "component/jquery": "*"
   },
   "development": {},

@@ -46,18 +46,10 @@ function require(path, parent, orig) {
 require.modules = {};
 
 /**
- * Main definitions.
+ * Registered aliases.
  */
 
-require.mains = {};
-
-/**
- * Define a main.
- */
-
-require.main = function(name, path){
-  require.mains[name] = path;
-};
+require.aliases = {};
 
 /**
  * Resolve `path`.
@@ -74,7 +66,7 @@ require.main = function(name, path){
  */
 
 require.resolve = function(path) {
-  if ('/' == path.charAt(0)) path = path.slice(1);
+  if (path.charAt(0) === '/') path = path.slice(1);
 
   var paths = [
     path,
@@ -84,15 +76,10 @@ require.resolve = function(path) {
     path + '/index.json'
   ];
 
-  if (require.mains[path]) {
-    paths = [path + '/' + require.mains[path]];
-  }
-
-  for (var i = 0, len = paths.length; i < len; i++) {
+  for (var i = 0; i < paths.length; i++) {
     var path = paths[i];
-    if (require.modules.hasOwnProperty(path)) {
-      return path;
-    }
+    if (require.modules.hasOwnProperty(path)) return path;
+    if (require.aliases.hasOwnProperty(path)) return require.aliases[path];
   }
 };
 
@@ -113,7 +100,7 @@ require.normalize = function(curr, path) {
   curr = curr.split('/');
   path = path.split('/');
 
-  for (var i = 0, len = path.length; i < len; ++i) {
+  for (var i = 0; i < path.length; ++i) {
     if ('..' == path[i]) {
       curr.pop();
     } else if ('.' != path[i] && '' != path[i]) {
@@ -137,6 +124,21 @@ require.register = function(path, definition) {
 };
 
 /**
+ * Alias a module definition.
+ *
+ * @param {String} from
+ * @param {String} to
+ * @api private
+ */
+
+require.alias = function(from, to) {
+  if (!require.modules.hasOwnProperty(from)) {
+    throw new Error('Failed to alias "' + from + '", it does not exist');
+  }
+  require.aliases[to] = from;
+};
+
+/**
  * Return a require function relative to the `parent` path.
  *
  * @param {String} parent
@@ -145,7 +147,7 @@ require.register = function(path, definition) {
  */
 
 require.relative = function(parent) {
-  var root = require.normalize(parent, '..');
+  var p = require.normalize(parent, '..');
 
   /**
    * lastIndexOf helper.
@@ -175,7 +177,15 @@ require.relative = function(parent) {
   localRequire.resolve = function(path) {
     var c = path.charAt(0);
     if ('/' == c) return path.slice(1);
-    if ('.' == c) return require.normalize(root, path);
+    if ('.' == c) return require.normalize(p, path);
+
+    // resolve deps by returning
+    // the dep in the nearest "deps"
+    // directory
+    var segs = parent.split('/');
+    var i = lastIndexOf(segs, 'deps') + 1;
+    if (!i) i = 0;
+    path = segs.slice(0, i + 1).join('/') + '/deps/' + path;
     return path;
   };
 
@@ -358,7 +368,7 @@ Emitter.prototype.hasListeners = function(event){
 });
 require.register("component-has-translate3d/index.js", function(exports, require, module){
 
-var prop = require("component-transform-property");
+var prop = require('transform-property');
 // IE8<= doesn't have `getComputedStyle`
 if (!prop || !window.getComputedStyle) return module.exports = false;
 
@@ -460,7 +470,7 @@ require.register("pgherveou-transitionend/index.js", function(exports, require, 
  * module dependencies
  */
 
-var prefix = require("pgherveou-prefix");
+var prefix = require('prefix');
 
 // transitionend mapping
 // src: https://github.com/twitter/bootstrap/issues/2870
@@ -568,7 +578,7 @@ require.register("anthonyshort-css-emitter/index.js", function(exports, require,
  * Module Dependencies
  */
 
-var events = require("component-event");
+var events = require('event');
 
 // CSS events
 
@@ -644,8 +654,8 @@ CssEmitter.prototype.once = function(fn){
 
 });
 require.register("anthonyshort-after-transition/index.js", function(exports, require, module){
-var hasTransitions = require("anthonyshort-has-transitions");
-var emitter = require("anthonyshort-css-emitter");
+var hasTransitions = require('has-transitions');
+var emitter = require('css-emitter');
 
 function afterTransition(el, callback) {
   if(hasTransitions(el)) {
@@ -717,14 +727,14 @@ to complete it's turn
   
 */
 
-var Emitter = require("component-emitter");
-var $ = require("component-jquery");
-var transform = require("component-transform-property");
-var has3d = require("component-has-translate3d");
-var transEndEventName = require("pgherveou-transitionend");
-var afterTransition = require("anthonyshort-after-transition");
+var Emitter = require('emitter');
+var $ = require('jquery');
+var transform = require('transform-property');
+var has3d = require('has-translate3d');
+var transEndEventName = require("transitionend");
+var afterTransition = require('after-transition');
 
-var template = require("./templates/booktemplate.js");
+var template = require('./templates/booktemplate.js');
 
 module.exports = PageTurner;
 
@@ -1426,7 +1436,7 @@ function setPerspective(elem, amount){
 require.register("binocarlos-pageturner/templates/booktemplate.js", function(exports, require, module){
 module.exports = '<div class="pageturner-book">\n	<div id="base">\n\n	</div>\n	<div id="fronts">\n\n	</div>\n	<div id="backs">\n\n	</div>\n	<div id="edges">\n\n	</div>\n</div>';
 });
-require.register("component-hammer.js/index.js", function(exports, require, module){
+require.register("binocarlos-hammer/index.js", function(exports, require, module){
 /*
  * Hammer.JS
  * version 0.6.1
@@ -11805,9 +11815,9 @@ if ( typeof define === "function" && define.amd && define.amd.jQuery ) {
 require.register("buddy/index.js", function(exports, require, module){
 // this is the stub
 
-var $ = require("component-jquery");
-var Hammer = require("component-hammer.js");
-var PageTurner = require("binocarlos-pageturner");
+var $ = require('jquery');
+var Hammer = require('hammer');
+var PageTurner = require('pageturner');
 
 /*
 
@@ -12074,3 +12084,42 @@ module.exports = function (options){
 
 
 
+
+require.alias("binocarlos-pageturner/index.js", "buddy/deps/pageturner/index.js");
+require.alias("binocarlos-pageturner/templates/booktemplate.js", "buddy/deps/pageturner/templates/booktemplate.js");
+require.alias("binocarlos-pageturner/index.js", "buddy/deps/pageturner/index.js");
+require.alias("binocarlos-pageturner/index.js", "pageturner/index.js");
+require.alias("component-emitter/index.js", "binocarlos-pageturner/deps/emitter/index.js");
+
+require.alias("component-has-translate3d/index.js", "binocarlos-pageturner/deps/has-translate3d/index.js");
+require.alias("component-transform-property/index.js", "component-has-translate3d/deps/transform-property/index.js");
+
+require.alias("component-transform-property/index.js", "binocarlos-pageturner/deps/transform-property/index.js");
+
+require.alias("component-jquery/index.js", "binocarlos-pageturner/deps/jquery/index.js");
+
+require.alias("pgherveou-transitionend/index.js", "binocarlos-pageturner/deps/transitionend/index.js");
+require.alias("pgherveou-transitionend/index.js", "binocarlos-pageturner/deps/transitionend/index.js");
+require.alias("pgherveou-prefix/index.js", "pgherveou-transitionend/deps/prefix/index.js");
+require.alias("pgherveou-prefix/index.js", "pgherveou-transitionend/deps/prefix/index.js");
+require.alias("pgherveou-prefix/index.js", "pgherveou-prefix/index.js");
+require.alias("pgherveou-transitionend/index.js", "pgherveou-transitionend/index.js");
+require.alias("anthonyshort-after-transition/index.js", "binocarlos-pageturner/deps/after-transition/index.js");
+require.alias("anthonyshort-after-transition/index.js", "binocarlos-pageturner/deps/after-transition/index.js");
+require.alias("anthonyshort-has-transitions/index.js", "anthonyshort-after-transition/deps/has-transitions/index.js");
+require.alias("anthonyshort-has-transitions/index.js", "anthonyshort-after-transition/deps/has-transitions/index.js");
+require.alias("anthonyshort-has-transitions/index.js", "anthonyshort-has-transitions/index.js");
+require.alias("anthonyshort-css-emitter/index.js", "anthonyshort-after-transition/deps/css-emitter/index.js");
+require.alias("component-emitter/index.js", "anthonyshort-css-emitter/deps/emitter/index.js");
+
+require.alias("component-event/index.js", "anthonyshort-css-emitter/deps/event/index.js");
+
+require.alias("anthonyshort-after-transition/index.js", "anthonyshort-after-transition/index.js");
+require.alias("binocarlos-pageturner/index.js", "binocarlos-pageturner/index.js");
+require.alias("binocarlos-hammer/index.js", "buddy/deps/hammer/index.js");
+require.alias("binocarlos-hammer/index.js", "hammer/index.js");
+
+require.alias("component-jquery/index.js", "buddy/deps/jquery/index.js");
+require.alias("component-jquery/index.js", "jquery/index.js");
+
+require.alias("buddy/index.js", "buddy/index.js");
